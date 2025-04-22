@@ -21,6 +21,8 @@ def display_chat_page(pipe):
         st.session_state.current_answer = ""
     if "response_time" not in st.session_state:
         st.session_state.response_time = 0.0
+    if "prompt_hint" not in st.session_state:
+        st.session_state.prompt_hint = ""
     if "feedback_given" not in st.session_state:
         st.session_state.feedback_given = False
 
@@ -45,7 +47,7 @@ def display_chat_page(pipe):
 
         # フィードバックフォームを表示 (まだフィードバックされていない場合)
         if not st.session_state.feedback_given:
-            display_feedback_form()
+            display_feedback_form(pipe, user_question)
         else:
              # フィードバック送信済みの場合、次の質問を促すか、リセットする
              if st.button("次の質問へ"):
@@ -53,11 +55,12 @@ def display_chat_page(pipe):
                   st.session_state.current_question = ""
                   st.session_state.current_answer = ""
                   st.session_state.response_time = 0.0
+                  st.session_state.prompt_hint = ""
                   st.session_state.feedback_given = False
                   st.rerun() # 画面をクリア
 
 
-def display_feedback_form():
+def display_feedback_form(pipe, user_question):
     """フィードバック入力フォームを表示する"""
     with st.form("feedback_form"):
         st.subheader("フィードバック")
@@ -74,6 +77,9 @@ def display_feedback_form():
             combined_feedback = f"{feedback}"
             if feedback_comment:
                 combined_feedback += f": {feedback_comment}"
+                # 質問プロンプトヒントを生成
+            if correct_answer:
+                st.session_state.prompt_hint, response_time = generate_response(pipe, user_question, correct_answer)
 
             save_to_db(
                 st.session_state.current_question,
@@ -81,7 +87,8 @@ def display_feedback_form():
                 combined_feedback,
                 correct_answer,
                 is_correct,
-                st.session_state.response_time
+                st.session_state.response_time,
+                st.session_state.prompt_hint
             )
             st.session_state.feedback_given = True
             st.success("フィードバックが保存されました！")
@@ -154,6 +161,7 @@ def display_history_list(history_df):
             st.markdown(f"**Feedback:** {row['feedback']}")
             if row['correct_answer']:
                 st.markdown(f"**Correct A:** {row['correct_answer']}")
+                st.markdown(f"**プロンプトヒント:** {row['prompt_hint']}")
 
             # 評価指標の表示
             st.markdown("---")

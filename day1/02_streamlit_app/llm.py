@@ -31,10 +31,12 @@ def load_model():
         st.error("GPUメモリ不足の可能性があります。不要なプロセスを終了するか、より小さいモデルの使用を検討してください。")
         return None
 
-def generate_response(pipe, user_question):
+def generate_response(pipe, user_question, correct_answer=""):
     """LLMを使用して質問に対する回答を生成する"""
     if pipe is None:
         return "モデルがロードされていないため、回答を生成できません。", 0
+    if correct_answer:
+        user_question = f"以下の**欲しい回答**を得るために、**質問**のレビューを行い、簡潔な校正案を教えてください。¥n**欲しい回答**:{correct_answer}¥n**校正する質問:{user_question}**:"
 
     try:
         start_time = time.time()

@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS {TABLE_NAME}
  correct_answer TEXT,
  is_correct REAL,      -- INTEGERからREALに変更 (0.5を許容するため)
  response_time REAL,
+ prompt_hint TEXT,
  bleu_score REAL,
  similarity_score REAL,
  word_count INTEGER,
@@ -39,7 +40,7 @@ def init_db():
         raise e # エラーを再発生させてアプリの起動を止めるか、適切に処理する
 
 # --- データ操作関数 ---
-def save_to_db(question, answer, feedback, correct_answer, is_correct, response_time):
+def save_to_db(question, answer, feedback, correct_answer, is_correct, response_time, prompt_hint):
     """チャット履歴と評価指標をデータベースに保存する"""
     conn = None
     try:
@@ -54,10 +55,10 @@ def save_to_db(question, answer, feedback, correct_answer, is_correct, response_
 
         c.execute(f'''
         INSERT INTO {TABLE_NAME} (timestamp, question, answer, feedback, correct_answer, is_correct,
-                                 response_time, bleu_score, similarity_score, word_count, relevance_score)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                 response_time, prompt_hint, bleu_score, similarity_score, word_count, relevance_score)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (timestamp, question, answer, feedback, correct_answer, is_correct,
-             response_time, bleu_score, similarity_score, word_count, relevance_score))
+             response_time, prompt_hint, bleu_score, similarity_score, word_count, relevance_score))
         conn.commit()
         print("Data saved to DB successfully.") # デバッグ用
     except sqlite3.Error as e:

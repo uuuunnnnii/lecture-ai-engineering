@@ -16,6 +16,7 @@ from sklearn.pipeline import Pipeline
 DATA_PATH = os.path.join(os.path.dirname(__file__), "../data/Titanic.csv")
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "../models")
 MODEL_PATH = os.path.join(MODEL_DIR, "titanic_model.pkl")
+MODEL_BACKUP_PATH = os.path.join(MODEL_DIR, "titanic_model_backup.pkl")
 
 
 @pytest.fixture
@@ -76,6 +77,10 @@ def preprocessor():
 @pytest.fixture
 def train_model(sample_data, preprocessor):
     """モデルの学習とテストデータの準備"""
+    # 既存のモデルをバックアップ
+    if os.path.exists(MODEL_PATH):
+        os.rename(MODEL_PATH, MODEL_BACKUP_PATH)
+
     # データの分割とラベル変換
     X = sample_data.drop("Survived", axis=1)
     y = sample_data["Survived"].astype(int)
@@ -109,16 +114,37 @@ def test_model_exists():
     assert os.path.exists(MODEL_PATH), "モデルファイルが存在しません"
 
 
+def evaluate_model_accuracy(model, X_test, y_test):
+    """モデルの精度を計算して返す"""
+    y_pred = model.predict(X_test)
+    return accuracy_score(y_test, y_pred)
+
+
 def test_model_accuracy(train_model):
     """モデルの精度を検証"""
     model, X_test, y_test = train_model
-
-    # 予測と精度計算
-    y_pred = model.predict(X_test)
-    accuracy = accuracy_score(y_test, y_pred)
+    accuracy = evaluate_model_accuracy(model, X_test, y_test)
 
     # Titanicデータセットでは0.75以上の精度が一般的に良いとされる
     assert accuracy >= 0.75, f"モデルの精度が低すぎます: {accuracy}"
+
+
+def test_compare_model_accuracy(train_model):
+    """バックアップモデルとの精度を比較"""
+    model, X_test, y_test = train_model
+    current_accuracy = evaluate_model_accuracy(model, X_test, y_test)
+
+    # バックアップモデルの読み込み
+    if not os.path.exists(MODEL_BACKUP_PATH):
+        pytest.skip("バックアップモデルが存在しません")
+
+    with open(MODEL_BACKUP_PATH, "rb") as f:
+        backup_model = pickle.load(f)
+
+    backup_accuracy = evaluate_model_accuracy(backup_model, X_test, y_test)
+    assert (
+        current_accuracy >= backup_accuracy
+    ), f"精度がバックアップモデルより劣化しています: {current_accuracy:.3f} < {backup_accuracy:.3f}"
 
 
 def test_model_inference_time(train_model):
